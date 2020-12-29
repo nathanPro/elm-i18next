@@ -201,20 +201,6 @@ t (Translations translations) key =
     Dict.get key translations |> Maybe.withDefault key
 
 
-replacePlaceholders : Replacements -> Delims -> String -> String
-replacePlaceholders replacements delims str =
-    let
-        ( start, end ) =
-            delimsToTuple delims
-    in
-    List.foldl
-        (\( key, value ) acc ->
-            String.replace (start ++ key ++ end) value acc
-        )
-        str
-        replacements
-
-
 delimsToTuple : Delims -> ( String, String )
 delimsToTuple delims =
     case delims of
@@ -356,13 +342,8 @@ Use this when you need to replace placeholders.
 
 -}
 tr : Translations -> Delims -> String -> Replacements -> String
-tr (Translations translations) delims key replacements =
-    case Dict.get key translations of
-        Just str ->
-            replacePlaceholders replacements delims str
-
-        Nothing ->
-            key
+tr translations delims key replacements =
+    customTr translations delims (\s -> s) key replacements |> String.concat
 
 
 {-| Translate a value and try different fallback languages by providing a list
