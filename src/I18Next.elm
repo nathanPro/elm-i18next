@@ -224,14 +224,9 @@ type alias CustomReplacements a =
     List ( String, a )
 
 
-type TranslationPiece
+type Partial a
     = Text String
-    | Placeholder String
-
-
-type CustomTranslationElement a
-    = Converted a
-    | Unconverted TranslationPiece
+    | Value a
 
 
 {-| Sometimes it can be useful to replace placeholders with other things than just `String`s.
@@ -253,75 +248,47 @@ If you only want `String`s though, use [`tr`](I18Next#tr) instead.
 
 -}
 customTr : Translations -> Delims -> (String -> a) -> String -> CustomReplacements a -> List a
-customTr (Translations translations) =
-    customReplace (\translationKey -> Dict.get translationKey translations)
+customTr (Translations d) delims lift key reps =
+    let
+        ( start, end ) =
+            delimsToTuple delims
 
+        pattern : String -> String
+        pattern k =
+            start ++ k ++ end
 
-customReplace : (String -> Maybe String) -> Delims -> (String -> a) -> String -> CustomReplacements a -> List a
-customReplace getTranslations delims lift translationKey replacements =
-    case getTranslations translationKey of
-        Just rawString ->
-            let
-                ( start, end ) =
-                    delimsToTuple delims
+        collapse : Partial a -> a
+        collapse p =
+            case p of
+                Text s ->
+                    lift s
 
-                -- finds occurences for `Text "pre {{key}} suf {{other}}"`  and replaces them with `[Text "pre ", Placeholder "key", Text " suf {{other}}"]`
-                parseSinglePlaceholderKey : String -> TranslationPiece -> List TranslationPiece
-                parseSinglePlaceholderKey key translationElement =
-                    case translationElement of
-                        Text rawText ->
-                            rawText
-                                |> String.split (start ++ key ++ end)
-                                |> List.map Text
-                                |> List.intersperse (Placeholder key)
+                Value v ->
+                    v
 
-                        Placeholder name ->
-                            [ Placeholder name ]
+        replace : ( String, a ) -> String -> List (Partial a)
+        replace ( k, v ) =
+            String.split (pattern k)
+                >> List.map Text
+                >> List.intersperse (Value v)
 
-                -- for rawString "Hello {{firstName}} {{lastName}}!",
-                -- parsedTranslation is [Text "Hello ", Placeholder "fistName", Placeholder "lastName"]
-                parsedTranslation : List TranslationPiece
-                parsedTranslation =
-                    List.foldl
-                        (\( key, _ ) acc ->
-                            List.concatMap (parseSinglePlaceholderKey key) acc
-                        )
-                        [ Text rawString ]
-                        replacements
+        replaceTexts : ( String, a ) -> List (Partial a) -> List (Partial a)
+        replaceTexts subs =
+            List.foldl
+                (\partial ->
+                    \acc ->
+                        case partial of
+                            Text s ->
+                                List.append acc (replace subs s)
 
-                -- given a list of translations, placeholderReplacers will replace all unconverted placeholders with
-                -- the custom replacements given by `replacements`
-                placeholderReplacers =
-                    List.map
-                        (\( key, value ) translationElement ->
-                            if Unconverted (Placeholder key) == translationElement then
-                                Converted value
-
-                            else
-                                translationElement
-                        )
-                        replacements
-            in
-            parsedTranslation
-                |> List.map Unconverted
-                |> (\list -> List.foldr List.map list placeholderReplacers)
-                |> List.map
-                    (\value ->
-                        case value of
-                            Converted converted ->
-                                converted
-
-                            Unconverted (Text text) ->
-                                lift text
-
-                            Unconverted (Placeholder name) ->
-                                -- this means, that there is a placeholder in the translation text,
-                                -- that we could not find a replacement for. We default to the name in that case
-                                lift name
-                    )
-
-        Nothing ->
-            [ lift translationKey ]
+                            _ ->
+                                List.append acc [ partial ]
+                )
+                []
+    in
+    Maybe.map (\s -> List.foldl replaceTexts [ Text s ] reps |> List.map collapse)
+        (Dict.get key d)
+        |> Maybe.withDefault [ lift key ]
 
 
 {-| Like [`customTr`](I18Next#customTr) but with support for fallback languages.
