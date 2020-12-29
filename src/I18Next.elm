@@ -341,19 +341,8 @@ customReplace getTranslations delims lift translationKey replacements =
 {-| Like [`customTr`](I18Next#customTr) but with support for fallback languages.
 -}
 customTrf : List Translations -> Delims -> (String -> a) -> String -> CustomReplacements a -> List a
-customTrf translationsList =
-    customReplace
-        (\translationsKey ->
-            let
-                getByKey (Translations translations) =
-                    Dict.get translationsKey translations
-            in
-            translationsList
-                |> List.filterMap getByKey
-                |> List.head
-                |> Maybe.withDefault translationsKey
-                |> Just
-        )
+customTrf =
+    resolveFallbacks >> customTr
 
 
 {-| Translate a value at a key, while replacing placeholders.
@@ -388,13 +377,18 @@ of languages, the function will try each language in the list.
 
 -}
 tf : List Translations -> String -> String
-tf translationsList key =
-    case translationsList of
-        (Translations translations) :: rest ->
-            Dict.get key translations |> Maybe.withDefault (tf rest key)
+tf =
+    resolveFallbacks >> t
 
-        [] ->
-            key
+
+fallback : Translations -> Translations -> Translations
+fallback (Translations d) (Translations f) =
+    Translations (Dict.union d f)
+
+
+resolveFallbacks : List Translations -> Translations
+resolveFallbacks =
+    List.foldr fallback initialTranslations
 
 
 {-| Combines the [`tr`](I18Next#tr) and the [`tf`](I18Next#tf) function.
@@ -410,18 +404,8 @@ at the same time.
 
 -}
 trf : List Translations -> Delims -> String -> Replacements -> String
-trf translationsList delims key replacements =
-    case translationsList of
-        (Translations translations) :: rest ->
-            case Dict.get key translations of
-                Just str ->
-                    replacePlaceholders replacements delims str
-
-                Nothing ->
-                    trf rest delims key replacements
-
-        [] ->
-            key
+trf =
+    resolveFallbacks >> tr
 
 
 {-| Represents the leaf of a translations tree. It holds the actual translation
