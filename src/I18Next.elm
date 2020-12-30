@@ -4,7 +4,7 @@ module I18Next exposing
     , t, tr, tf, trf, customTr, customTrf
     , keys, hasKey
     , Tree, fromTree, string, object
-    , toList
+    , insert, toList
     )
 
 {-| This library provides a solution to load and display translations in your
@@ -124,6 +124,13 @@ translations |
 toList : Translations -> List ( String, String )
 toList (Translations d) =
     Dict.toList d
+
+
+{-| |
+-}
+insert : String -> String -> Translations -> Translations
+insert k v (Translations d) =
+    Translations (Dict.insert k v d)
 
 
 {-| Decode a JSON translations file. The JSON can be arbitrarly nested, but the
