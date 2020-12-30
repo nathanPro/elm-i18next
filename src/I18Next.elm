@@ -4,6 +4,7 @@ module I18Next exposing
     , t, tr, tf, trf, customTr, customTrf
     , keys, hasKey
     , Tree, fromTree, string, object
+    , toList
     )
 
 {-| This library provides a solution to load and display translations in your
@@ -115,6 +116,14 @@ translations.
 hasKey : Translations -> String -> Bool
 hasKey (Translations dict) key =
     Dict.member key dict
+
+
+{-| Converts a Translations into a list of keys and their respective
+translations |
+-}
+toList : Translations -> List ( String, String )
+toList (Translations d) =
+    Dict.toList d
 
 
 {-| Decode a JSON translations file. The JSON can be arbitrarly nested, but the
