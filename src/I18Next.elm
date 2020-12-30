@@ -1,6 +1,6 @@
 module I18Next exposing
     ( Translations, Delims(..), Replacements, CustomReplacements, initialTranslations
-    , translationsDecoder
+    , decoder
     , t, tr, tf, trf, customTr, customTrf
     , keys, hasKey
     , Tree, fromTree, string, object
@@ -22,7 +22,7 @@ needed.
 
 Turn your JSON into translations.
 
-@docs translationsDecoder
+@docs decoder
 
 
 ## Using Translations
@@ -146,15 +146,15 @@ functions separated with dots.
     -}
 
     --Use the decoder like this on a string
-    import I18Next exposing (translationsDecoder)
-    Json.Decode.decodeString translationsDecoder "{ \"greet\": \"Hello\" }"
+    import I18Next
+    Json.Decode.decodeString I18Next.decoder "{ \"greet\": \"Hello\" }"
 
     -- or on a Json.Encode.Value
-    Json.Decode.decodeValue translationsDecoder encodedJson
+    Json.Decode.decodeValue I18Next.decoder encodedJson
 
 -}
-translationsDecoder : Decoder Translations
-translationsDecoder =
+decoder : Decoder Translations
+decoder =
     Decode.dict treeDecoder
         |> Decode.map (flattenTranslations >> Translations)
 
