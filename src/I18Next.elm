@@ -4,7 +4,7 @@ module I18Next exposing
     , t, tr, tf, trf, customTr, customTrf
     , keys, hasKey
     , Tree, fromTree, string, object
-    , insert, toList
+    , encode, insert, toList
     )
 
 {-| This library provides a solution to load and display translations in your
@@ -55,6 +55,7 @@ functions let you build a `Translations` value programmatically.
 
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
+import Json.Encode
 
 
 {-| A type representing a hierarchy of nested translations. You'll only ever
@@ -160,6 +161,11 @@ functions separated with dots.
     Json.Decode.decodeValue I18Next.decoder encodedJson
 
 -}
+encode : Translations -> Json.Encode.Value
+encode (Translations d) =
+    Json.Encode.dict (\s -> s) Json.Encode.string d
+
+
 decoder : Decoder Translations
 decoder =
     Decode.dict treeDecoder
